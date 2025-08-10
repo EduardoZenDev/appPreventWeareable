@@ -7,6 +7,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.location.Location
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
@@ -44,6 +45,8 @@ class SpeedActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
@@ -162,7 +165,7 @@ fun registerAccelerometer(
                     }
                 } else if (fallDetected && acceleration < lowMovementThreshold) {
                     if (currentTime - fallTimeMillis in 1000..4000) {
-                        Log.d("FallDetection", "🚨 CAÍDA CONFIRMADA")
+                        Log.d("FallDetection", "CAIDA")
                         coroutineScope.launch(Dispatchers.IO) {
                             sendConfirmedFallToPhone(context)
                         }
@@ -226,15 +229,31 @@ suspend fun sendSpeedToPhone(context: Context, speed: Float) {
     }
 }
 
+suspend fun getCurrentLocation(context: Context): Location? {
+    return try {
+        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+        fusedLocationClient.lastLocation.await()
+    } catch (e: Exception) {
+        Log.e("Location", "No se pudo obtener la ubicación actual: ${e.message}")
+        null
+    }
+}
+
 suspend fun sendFallDataToPhone(context: Context) {
     try {
+        val location = getCurrentLocation(context)
+        val locationText = if (location != null) {
+            "CAIDA en lat:${location.latitude}, lon:${location.longitude}"
+        } else {
+            "CAIDA (ubicación no disponible)"
+        }
+
         val nodes = Wearable.getNodeClient(context).connectedNodes.await()
-        val message = "Posible caída detectada"
         nodes.forEach { node ->
             Wearable.getMessageClient(context).sendMessage(
                 node.id,
                 "/fall",
-                message.toByteArray()
+                locationText.toByteArray()
             ).await()
         }
     } catch (e: Exception) {
@@ -244,13 +263,19 @@ suspend fun sendFallDataToPhone(context: Context) {
 
 suspend fun sendConfirmedFallToPhone(context: Context) {
     try {
+        val location = getCurrentLocation(context)
+        val locationText = if (location != null) {
+            "POSIBLE CAIDA en lat:${location.latitude}, lon:${location.longitude}"
+        } else {
+            "POSIBLE CAIDA (ubicación no disponible)"
+        }
+
         val nodes = Wearable.getNodeClient(context).connectedNodes.await()
-        val message = "¡Caída confirmada!"
         nodes.forEach { node ->
             Wearable.getMessageClient(context).sendMessage(
                 node.id,
                 "/confirmed_fall",
-                message.toByteArray()
+                locationText.toByteArray()
             ).await()
         }
     } catch (e: Exception) {

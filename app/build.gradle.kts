@@ -63,7 +63,10 @@ dependencies {
     implementation ("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("androidx.compose.material:material:1.4.3")
     implementation("androidx.compose.material:material-icons-extended:1.5.0")
-
+    implementation("androidx.compose.material3:material3:1.1.0") // o la versión más reciente
+    implementation ("androidx.core:core-ktx:1.10.1")
+    implementation ("androidx.compose.ui:ui:1.4.3")
+ implementation ("androidx.activity:activity-compose:1.7.2")
     // AndroidX & Jetpack
     implementation(libs.appcompat)
     implementation(libs.core.splashscreen)
