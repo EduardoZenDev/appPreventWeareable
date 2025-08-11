@@ -206,9 +206,12 @@ fun startLocationUpdates(
 
                 onSpeedChanged(speedKmh, this)
 
-                // 🚨 ALERTA: Si supera 10 km/h, vibrar y sonar
-                if (speedKmh > 1f) {
+                if (speedKmh > 1f) { // 📌 Límite de velocidad
                     triggerVibrationAndSound(context)
+
+                    coroutineScope.launch(Dispatchers.IO) {
+                        sendSpeedExceededToPhone(context, location)
+                    }
                 }
 
                 coroutineScope.launch(Dispatchers.IO) {
@@ -220,6 +223,23 @@ fun startLocationUpdates(
 
     fusedLocationClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
 }
+suspend fun sendSpeedExceededToPhone(context: Context, location: Location) {
+    try {
+        val locationText = "VELOCIDAD SUPERADA en lat:${location.latitude}, lon:${location.longitude}"
+
+        val nodes = Wearable.getNodeClient(context).connectedNodes.await()
+        nodes.forEach { node ->
+            Wearable.getMessageClient(context).sendMessage(
+                node.id,
+                "/speed_exceeded",
+                locationText.toByteArray()
+            ).await()
+        }
+    } catch (e: Exception) {
+        Log.e("SpeedActivity", "Error al enviar aviso de velocidad superada: ${e.message}")
+    }
+}
+
 fun triggerVibrationAndSound(context: Context) {
     // Vibrar
     val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
