@@ -34,7 +34,10 @@ import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
 import kotlin.math.sqrt
-
+import android.os.Vibrator
+import android.os.VibrationEffect
+import android.media.ToneGenerator
+import android.media.AudioManager
 var lastAccelerometerValues = floatArrayOf(0f, 0f, 0f, 0f)
 
 class SpeedActivity : ComponentActivity() {
@@ -203,6 +206,11 @@ fun startLocationUpdates(
 
                 onSpeedChanged(speedKmh, this)
 
+                // 🚨 ALERTA: Si supera 10 km/h, vibrar y sonar
+                if (speedKmh > 1f) {
+                    triggerVibrationAndSound(context)
+                }
+
                 coroutineScope.launch(Dispatchers.IO) {
                     sendSpeedToPhone(context, speedKmh)
                 }
@@ -211,6 +219,26 @@ fun startLocationUpdates(
     }
 
     fusedLocationClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
+}
+fun triggerVibrationAndSound(context: Context) {
+    // Vibrar
+    val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        val vm = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as android.os.VibratorManager
+        vm.defaultVibrator
+    } else {
+        context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    }
+
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
+    } else {
+        @Suppress("DEPRECATION")
+        vibrator.vibrate(500)
+    }
+
+    // Sonido
+    val toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
+    toneGen.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 300)
 }
 
 suspend fun sendSpeedToPhone(context: Context, speed: Float) {
