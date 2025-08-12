@@ -206,7 +206,7 @@ fun startLocationUpdates(
 
                 onSpeedChanged(speedKmh, this)
 
-                if (speedKmh > 1f) { // 📌 Límite de velocidad
+                if (speedKmh > 30f) { // 📌 Límite de velocidad
                     triggerVibrationAndSound(context)
 
                     coroutineScope.launch(Dispatchers.IO) {

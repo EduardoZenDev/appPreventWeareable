@@ -24,11 +24,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Evita que la pantalla se apague
+        val activityContext = this  // <-- Aquí defines el contexto
+
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        // Escuchar mensajes desde el teléfono
-        Wearable.getMessageClient(this).addListener { messageEvent: MessageEvent ->
+        Wearable.getMessageClient(activityContext).addListener { messageEvent: MessageEvent ->
             val message = String(messageEvent.data)
             if (messageEvent.path == "/detener_envio") {
                 when (message) {
@@ -36,19 +36,19 @@ class MainActivity : ComponentActivity() {
                         DataSenderControl.isSendingData = false
                         android.util.Log.d("MainActivity", "📡 Envío de datos detenido por el teléfono")
 
-                        // Regresar a MainActivity, cerrando actividades superiores
-                        val intent = Intent(this, MainActivity::class.java)
+                        val intent = Intent(activityContext, MainActivity::class.java)
                         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                        startActivity(intent)
+                        activityContext.startActivity(intent)
                     }
                     "START" -> {
                         DataSenderControl.isSendingData = true
                         android.util.Log.d("MainActivity", "📡 Envío de datos reanudado por el teléfono")
-                        // Similar aquí si quieres regresar a MainActivity también
-                        val intent = Intent(this, MainActivity::class.java)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                        startActivity(intent)
+
+                        val intent = Intent(activityContext, SpeedActivity::class.java)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        activityContext.startActivity(intent)
                     }
+
                 }
             }
         }
